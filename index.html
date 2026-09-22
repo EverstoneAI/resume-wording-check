@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>简历措辞检查</title>
+<style>
+:root{--bg:#F0EFF5;--card:#FFFFFF;--ink:#1E1B28;--ink2:#5C5869;--ink3:#918CA0;--acc:#4A4E69;--acc2:#5D6284;--acc-soft:#EEEDF5;--line:#E1DFEA;--warn:#B4451F;--ok:#2F6D4F;--shadow:0 1px 2px rgba(46,40,70,.05),0 10px 28px rgba(46,40,70,.07)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;line-height:1.7}
+.hero{background:linear-gradient(135deg,#30334B 0%,#4A4E69 55%,#5D6284 100%);color:#fff;padding:34px 20px 64px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(620px 300px at 88% -70px,rgba(255,255,255,.16),transparent 70%),radial-gradient(520px 280px at 4% 140%,rgba(255,255,255,.09),transparent 70%);pointer-events:none}
+.hero-in{max-width:900px;margin:0 auto;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;position:relative}
+.logo{width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.26);display:flex;align-items:center;justify-content:center;flex:none}
+.hero-t{flex:1;min-width:260px}
+h1{font-size:26px;margin:2px 0 6px;font-weight:700;letter-spacing:.02em}
+.sub{color:#DCDAE8;font-size:13.5px;margin:0;max-width:640px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding-top:6px}
+.chip{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);color:#EDECF4;border-radius:999px;padding:3px 12px;font-size:12px;white-space:nowrap}
+.chip::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#79D1A4;margin-right:7px;vertical-align:1px}
+.wrap{max-width:900px;margin:-36px auto 0;padding:0 20px 30px;position:relative}
+.bound{background:#FFF8EC;border:1px solid #EFE0C8;border-left:4px solid #D9A026;border-radius:12px;padding:10px 14px;font-size:12.5px;color:#7A6242;margin-bottom:16px;line-height:1.7;box-shadow:var(--shadow)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
+label{display:block;font-size:13px;color:var(--ink2);margin:0 0 6px;font-weight:700}
+textarea{width:100%;min-height:210px;padding:14px;border:1px solid #CDCADA;border-radius:12px;font:inherit;font-size:14px;line-height:1.8;resize:vertical;background:#FDFCFF;color:var(--ink)}
+textarea:focus{outline:none;border-color:var(--acc2);box-shadow:0 0 0 3px rgba(93,98,132,.16)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:13px}
+button{font:inherit;font-size:14px;font-weight:600;padding:10px 22px;border-radius:10px;border:1px solid transparent;background:linear-gradient(180deg,var(--acc2),var(--acc));color:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(74,78,105,.3);transition:transform .12s,box-shadow .12s,background .15s}
+button:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(74,78,105,.34)}
+button:active{transform:translateY(0)}
+button.ghost{background:#fff;color:var(--acc);border-color:#CFCCDC;box-shadow:none}
+button.ghost:hover{background:var(--acc-soft);border-color:var(--acc2);box-shadow:0 3px 8px rgba(74,78,105,.12)}
+.hint{color:var(--ink3);font-size:12px}
+.stat{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 14px;font-size:13px;color:var(--ink2)}
+.stat>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow)}
+.stat b{font-size:19px;color:var(--acc)}
+.group{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:14px;padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.group h3{margin:0 0 10px;font-size:15.5px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.group h3 span{font-size:12px;color:var(--ink2);font-weight:600;background:#F1F0F7;border:1px solid var(--line);border-radius:999px;padding:2px 11px;white-space:nowrap}
+#result .group:nth-of-type(1){border-left-color:#D97A26}
+#result .group:nth-of-type(2){border-left-color:#7A5AAF}
+#result .group:nth-of-type(3){border-left-color:#C2506E}
+#result .group:nth-of-type(4){border-left-color:#2A8C8C}
+.hit{border-top:1px dashed var(--line);padding:10px 0 4px}
+.hit:first-of-type{border-top:0}
+.quote{background:#FBF6EC;border-left:3px solid #DFB36C;border-radius:0 8px 8px 0;padding:8px 12px;font-size:13.5px;margin:4px 0 6px;word-break:break-word}
+.quote em{background:#FFE1A8;color:#6E4300;font-style:normal;font-weight:700;border-radius:3px;padding:0 2px}
+.fix{font-size:13px;color:var(--ink2)}
+.fix b{color:var(--ok)}
+.empty{color:var(--ink3);font-size:13px}
+pre.out{background:#F4F2F9;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12.5px;white-space:pre-wrap;word-break:break-word;margin:8px 0 0}
+.foot{color:var(--ink3);font-size:12.5px;margin-top:26px;border-top:1px solid var(--line);padding-top:14px;line-height:1.9}
+.how{margin:8px 0 0;padding:0;list-style:none}
+.how li{padding:8px 4px;border-top:1px dashed var(--line);font-size:13.5px}
+.how li:first-child{border-top:0}
+.how b{color:var(--acc)}
+.how .alt{color:#7A6242;background:#FFF8EC;border-radius:6px;padding:5px 10px;margin-top:6px;font-size:12.5px;display:block}
+.pb-t{font-weight:700;font-size:14px;margin:18px 0 4px;display:flex;align-items:center;gap:8px}
+.pb-t::before{content:"";flex:none;width:6px;height:16px;border-radius:3px;background:linear-gradient(180deg,var(--acc2),var(--acc))}
+.pb-note{color:var(--ink3);font-size:12.5px;margin:0 0 8px}
+.promptbox textarea{min-height:0;font-size:13px;line-height:1.75;background:#FBFCFE;margin:4px 0 12px;cursor:text}
+.notewarn{background:#FFF8EC;border:1px solid #EFE0C8;border-left:4px solid #D9A026;border-radius:10px;padding:9px 13px;font-size:12.5px;color:#7A6242}
+@media(max-width:640px){.hero{padding:26px 16px 56px}h1{font-size:22px}.logo{width:44px;height:44px;border-radius:12px}.logo svg{width:24px;height:24px}.panel{padding:16px 14px}.wrap{padding:0 14px 24px}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-in">
+    <div class="logo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V7.5L14 3z"/><path d="M13.8 3.2V8h4.5"/><path d="m9.3 14.3 1.9 1.9 3.6-4.2"/></svg></div>
+    <div class="hero-t">
+      <h1>简历措辞检查</h1>
+      <div class="sub">投出去之前过一遍：哪些话没有依据、哪些是空话、哪些成绩自己都证明不了。</div>
+    </div>
+    <div class="chips"><span class="chip">本机运行</span><span class="chip">文字不上传</span><span class="chip">完全不联网</span></div>
+  </div>
+</header>
+<div class="wrap">
+  <div class="bound">本工具只做标记与提醒，不替你判断；结果请人工复核后再对外使用。</div>
+
+  <div class="panel">
+    <label for="src">待检查文字</label>
+    <textarea id="src" placeholder="把要检查的文字整段粘进来（AI 写的稿子、汇报、标书、详情页文案都行）…"></textarea>
+    <div class="row">
+      <button id="run">开始检查</button>
+      <button id="clr" class="ghost">清空</button>
+      <button id="copy" class="ghost">复制改法清单</button>
+      <span class="hint" id="state"></span>
+    </div>
+  </div>
+
+  <div id="stat" class="stat" style="display:none"></div>
+  <div id="result"></div>
+
+  <div class="panel">
+    <div class="pb-t" style="margin-top:0">改写指南：查出问题后，这条该怎么改、素材从哪找</div>
+    <ul class="how">
+      <li><b>① 没依据的话（精通 / 大幅提升 / 遥遥领先）</b> —— 改成「范围＋数字」：在哪个项目、做了多少、结果如何。<span class="alt">素材从哪找：项目复盘文档、周报月报、数据后台截图、当时的汇报邮件和群消息——数字大多躺在这些地方，不在你脑子里。</span></li>
+      <li><b>② 空话套话（认真负责 / 吃苦耐劳）</b> —— 删掉，换成一件具体的事＋它的结果。一句「三个月把客户投诉响应时间从 2 天压到 4 小时」顶十个「认真负责」。<span class="alt">实在找不到数字也不慌：用范围和相对值（「约」「一半以上」「从 X 到 Y」），真实但别编精确数。</span></li>
+      <li><b>③ 顺着你说的话（恳请贵公司 / 不胜感激）</b> —— 不需要素材，直接删，把位子留给事实。</li>
+      <li><b>④ 长句</b> —— 拆成两三句，一句一件事。也不需要素材，删字就行。</li>
+      <li><b>⑤ 改完自检一遍</b> —— 每句都过一遍「做了什么＋怎么做＋结果是多少」，三样凑不齐的句子还能再改。</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <div class="pb-t" style="margin-top:0">不会改？复制提示词去问 AI，让它帮你改写</div>
+    <div class="pb-note">点一下文本框全选，Ctrl+C 复制，粘到任意 AI 对话框，把「__」处换成你的实际情况再发送。手机上长按也可全选复制。</div>
+    <div class="promptbox">
+      <label for="presume">提示词 · 改写简历句子</label>
+      <textarea id="presume" readonly rows="9" onclick="this.select()" title="点击全选，Ctrl+C 复制">请帮我改写简历里的一段经历。我只提供下面这些素材，没给我的信息不要编造；哪里空着没填，先问我再写。
+【原句】：__
+【应聘的岗位/行业】：__
+【我真实做过的事】：__
+【大概数字（记不清就写"记不清"）】：__
+写法要求：① 改成「做了什么＋怎么做＋结果数字」的结构；② 数字不确定的用「约」「以上」表述，不许编精确数；③ 删掉所有空话和夸对方的词；④ 每条不超过 40 字；⑤ 给我 2 个版本：一版正式、一版更口语。</textarea>
+    </div>
+    <div class="notewarn">提示：AI 只帮你起草，可能写错或编造——简历上的每个数字你都要能自己讲清楚，面试会被追问。</div>
+  </div>
+
+  <div class="foot">
+    简历措辞检查 · 单文件网页，双击即用 ｜ 交付方：浮石录 · AI 工具定制<br>
+    说明：本工具在你本机浏览器里跑，文字不上传、不联网。<br>
+    ——检查结果由工具生成，人工复核后交付。
+  </div>
+</div>
+
+<script>
+const CFG = {"title": "简历措辞检查", "subtitle": "投出去之前过一遍：哪些话没有依据、哪些是空话、哪些成绩自己都证明不了。", "accent": "#4A4E69", "footer": "简历措辞检查 · 单文件网页，双击即用 ｜ 交付方：浮石录 · AI 工具定制", "signature": "——检查结果由工具生成，人工复核后交付。", "max_sentence_len": 60, "max_show": 14, "empty_words": ["工作认真负责", "认真负责", "吃苦耐劳", "学习能力强", "较强的沟通能力", "团队合作精神", "有责任心", "积极主动", "善于沟通", "热爱学习", "抗压能力强", "执行力强", "熟悉各种办公软件", "熟练掌握", "性格开朗", "有较强的", "良好的沟通能力", "能吃苦"], "assert_words": ["精通", "行业第一", "顶尖水平", "完美", "无人能及", "零差评", "遥遥领先", "大幅提升", "全面提升", "多年丰富经验", "最擅长", "全权负责", "独立完成整个", "包揽全部", "独家负责"], "vague_source": ["据了解", "据说", "广受好评", "深受好评", "获得一致好评", "受到领导表扬", "业内公认", "行业领先", "颇具口碑", "获得客户认可", "得到同事认可", "普遍认为", "业内知名", "有口皆碑"], "flatter_words": ["十分荣幸", "恳请贵公司", "希望贵公司能给个机会", "如蒙录用", "不胜感激", "期待您的回复", "我非常渴望加入", "愿意从基层做起", "只要给我机会", "感谢您百忙之中", "诚惶诚恐", "望贵公司考虑"]};
+const $ = function(s){ return document.querySelector(s); };
+const src = $('#src'), result = $('#result'), statBox = $('#stat');
+
+function esc(s){ return s.replace(/[&<>]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]; }); }
+
+/* 把命中词在原文里高亮 */
+function mark(text, word){
+  var i = text.indexOf(word);
+  if(i < 0) return esc(text);
+  return esc(text.slice(0, i)) + '<em>' + esc(word) + '</em>' + esc(text.slice(i + word.length));
+}
+
+/* 按标点切句，保留原句 */
+function sentences(t){
+  return t.split(/(?<=[。！？；!?;\n])/).map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+}
+
+function findHits(sents, words){
+  var hits = [];
+  sents.forEach(function(s){
+    words.forEach(function(w){
+      if(w && s.indexOf(w) >= 0) hits.push({ s: s, w: w });
+    });
+  });
+  return hits;
+}
+
+function renderGroup(title, tag, hits, fixFn, emptyText){
+  var h = '<div class="group"><h3>' + title + '<span>' + tag + '</span></h3>';
+  if(!hits.length){
+    h += '<div class="empty">' + emptyText + '</div></div>';
+    return h;
+  }
+  hits.slice(0, CFG.max_show || 12).forEach(function(x){
+    h += '<div class="hit"><div class="quote">' + mark(x.s, x.w) + '</div>' +
+         '<div class="fix">改法：' + fixFn(x) + '</div></div>';
+  });
+  if(hits.length > (CFG.max_show || 12)){
+    h += '<div class="hit empty">还有 ' + (hits.length - (CFG.max_show || 12)) + ' 处同类，先改上面这几处。</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function run(){
+  var t = src.value.trim();
+  if(!t){ $('#state').textContent = '先粘点文字进来'; return; }
+  var sents = sentences(t);
+  var chars = t.replace(/\s/g, '').length;
+
+  var hEmpty  = findHits(sents, CFG.empty_words || []);
+  var hAssert = findHits(sents, CFG.assert_words || []);
+  var hSource = findHits(sents, CFG.vague_source || []);
+  var hFlatter= findHits(sents, CFG.flatter_words || []);
+  var hLong   = sents.filter(function(s){ return s.length > (CFG.max_sentence_len || 60); }).map(function(s){ return { s: s, w: s.slice(0, 12) }; });
+
+  var html = '';
+  html += renderGroup('一、没依据的话', '查出 ' + (hAssert.length + hSource.length) + ' 处',
+    hAssert.concat(hSource),
+    function(x){
+      if(CFG.vague_source && CFG.vague_source.indexOf(x.w) >= 0) return '<b>补出处</b>：写清是谁给的、什么时候、哪份材料；写不出就删掉这三个字，把话改成你自己能负责的说法。';
+      return '<b>去掉绝对化</b>：把「' + x.w + '」改成具体范围（在哪个范围里、跟谁比、什么时间）。';
+    },
+    '没查出没依据的断言——这一段没在替你吹牛。');
+
+  html += renderGroup('二、空话套话', '查出 ' + hEmpty.length + ' 处', hEmpty,
+    function(x){ return '<b>换成事实</b>：「' + x.w + '」这类词删掉，直接写做了什么、结果是多少。'; },
+    '没查出套话。');
+
+  html += renderGroup('三、顺着你说的话', '查出 ' + hFlatter.length + ' 处', hFlatter,
+    function(x){ return '<b>删掉附和的头</b>：直接给结论或直接说哪里不对，不用先夸一句。'; },
+    '没查出顺着你说的句子。');
+
+  html += renderGroup('顺带看一眼：长句', '查出 ' + hLong.length + ' 处', hLong,
+    function(){ return '<b>拆句</b>：一句一件事，超过 ' + (CFG.max_sentence_len || 60) + ' 字的拆成两三句。'; },
+    '句子长度都还行。');
+
+  result.innerHTML = html;
+
+  var score = hEmpty.length + hAssert.length + hSource.length + hFlatter.length;
+  statBox.style.display = 'flex';
+  statBox.innerHTML = '<div>字数 <b>' + chars + '</b></div>' +
+                      '<div>句子 <b>' + sents.length + '</b></div>' +
+                      '<div>待改处 <b>' + score + '</b></div>' +
+                      '<div>结论 <b>' + (score === 0 ? '干净' : score <= 3 ? '小改' : score <= 8 ? '要改' : '重写') + '</b></div>';
+  $('#state').textContent = '检查完了';
+  window.__last = { sents: sents, hEmpty: hEmpty, hAssert: hAssert, hSource: hSource, hFlatter: hFlatter, hLong: hLong };
+  try{ renderDiag(t); }catch(e){ /* 诊断链路异常不阻断词库检查 */ }
+}
+
+function plainList(){
+  var d = window.__last;
+  if(!d){ return '（还没检查）'; }
+  var lines = ['【' + CFG.title + '】改法清单', ''];
+  function sec(name, arr, fn){
+    lines.push('— ' + name + '（' + arr.length + ' 处）');
+    if(!arr.length){ lines.push('  无'); }
+    arr.forEach(function(x, i){ lines.push('  ' + (i + 1) + '. 原文：' + x.s.slice(0, 60)); lines.push('     改法：' + fn(x)); });
+    lines.push('');
+  }
+  sec('没依据的话', d.hAssert.concat(d.hSource), function(){ return '补出处，写不出就删掉；绝对化改成具体范围。'; });
+  sec('空话套话', d.hEmpty, function(x){ return '删掉「' + x.w + '」，改写事实与数字。'; });
+  sec('顺着你说的话', d.hFlatter, function(){ return '删掉附和的头，直接给结论。'; });
+  sec('长句', d.hLong, function(){ return '一句一件事，拆句。'; });
+  lines.push(CFG.signature || '');
+  return lines.join('\n');
+}
+
+$('#run').addEventListener('click', run);
+$('#clr').addEventListener('click', function(){ src.value = ''; result.innerHTML = ''; statBox.style.display = 'none'; $('#state').textContent = ''; });
+$('#copy').addEventListener('click', function(){
+  var txt = plainList();
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt); }
+  else { var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  $('#state').textContent = '改法清单已复制';
+});
+
+/* ========== 结构诊断 + 六维评分（确定性规则近似；移植自 resume-diagnosis skill v2.0.2 的公开规则口径。
+   近似必有漏报误报，页面已标注"规则近似，仅供参考"；只查结构与写法，不判断经历真伪。零依赖，无 AI 调用。）========== */
+var DIAGC = {
+  mods: [["工作经历","work"],["实习经历","internship"],["项目经历","project"],["实践经历","practice"],
+         ["校内活动|校内工作|校园活动","campus"],["比赛经历|竞赛经历|比赛|竞赛","competition"],
+         ["培训经历","training"],["教育经历","education"],["专业技能|技能特长","skills"],
+         ["自我评价|自我介绍","selfEval"],["爱好特长|兴趣爱好","hobby"],["职业规划","careerPlan"],
+         ["应聘理由","applyReason"],["适合的工作|适合岗位","suitableJob"],["奖励记录|荣誉奖项|获奖情况","reward"]],
+  names: { work:"工作经历", internship:"实习经历", project:"项目经历", practice:"实践经历", campus:"校内活动",
+           competition:"比赛经历", training:"培训经历", education:"教育经历", skills:"专业技能",
+           selfEval:"自我评价", hobby:"爱好特长", careerPlan:"职业规划", applyReason:"应聘理由",
+           suitableJob:"适合的工作", reward:"奖励记录" },
+  combo: { work:["work","project","skills"], internship:["internship","practice","skills"], noInternship:["practice","skills"] },
+  typeNames: { work:"职场人士（有工作经历）", internship:"应届生（有实习）", noInternship:"零实习" }
+};
+
+function diagParseMods(t){
+  var lines = t.split(/\n/), cur = null, out = {};
+  var re = new RegExp("^[#\\s\\*\\-·>]*(?:" + DIAGC.mods.map(function(m){ return "(" + m[0] + ")"; }).join("|") + ")\\s*[:：]?\\s*$");
+  lines.forEach(function(ln){
+    var m2 = ln.match(re);
+    if(m2){
+      for(var i = 1; i < m2.length; i++){
+        if(m2[i]){
+          for(var j = 0; j < DIAGC.mods.length; j++){
+            if(new RegExp("^(?:" + DIAGC.mods[j][0] + ")$").test(m2[i])){ cur = DIAGC.mods[j][1]; out[cur] = ""; break; }
+          }
+          break;
+        }
+      }
+    } else if(cur){ out[cur] += ln + "\n"; }
+  });
+  Object.keys(out).forEach(function(k){ out[k] = out[k].replace(/\n+$/, ""); });
+  return out;
+}
+
+function diagType(mods){
+  /* 按简历里有没有工作/实习的实质内容定（加料说明边界 2：自动推断，不弹窗） */
+  if(mods.work && mods.work.length > 10) return "work";
+  if(mods.internship && mods.internship.length > 10) return "internship";
+  return "noInternship";
+}
+
+function diagMonths(t){
+  var re = /((?:19|20)\d{2})\s*[\.\/年\-]\s*(\d{1,2})\s*月?\s*(?:[-–—~～至到]{1,2})\s*((?:19|20)\d{2})\s*[\.\/年\-]\s*(\d{1,2})\s*月?/g;
+  var m, months = 0;
+  while((m = re.exec(t)) != null){
+    var sy = +m[1], sm = +m[2], ey = +m[3], em = +m[4];
+    if(sm < 1 || sm > 12 || em < 1 || em > 12) continue;
+    months += (ey - sy) * 12 + (em - sm) + 1; /* 含起止月；无结束时间的不计 */
+  }
+  return months;
+}
+
+function diagCheck(mods){
+  var items = [], pass = 0, total = 0;
+  function need(body, re, tip){ total++; if(re.test(body)) pass++; else tips.push(tip); }
+  var tips = [];
+  Object.keys(mods).forEach(function(code){
+    var body = mods[code].trim();
+    if(body.length < 10) return;
+    tips = [];
+    total++; if(/[0-9０-９]/.test(body)) pass++;
+    else tips.push("缺量化结果：补「提升了 x%／完成了 x 项／服务 x 人」这类数字；没有精确数用「约」「以上」，但别编。");
+    if(code == "project"){
+      need(body, /介绍|背景|概述|级别/, "项目介绍（项目级别/背景/类型/方向）没写清。");
+      need(body, /职责|负责|角色|担任|主导/, "承担职责（担任角色、负责内容、起到的作用）没写清。");
+      need(body, /成果|结果|效果|产出|上线|验收|好评/, "项目成果没单独交代——评审看的是结果。");
+    } else if(code == "competition"){
+      need(body, /级别|规模|省级|国家级|校级|市级|地区|届/, "比赛情况（级别、规模）没写清。");
+      need(body, /负责|担任|主力|参与|队员/, "个人职责没写清。");
+      need(body, /奖|名次|获奖|荣誉|收获|晋级/, "比赛结果（奖励、名次、收获）没写清。");
+    } else if(code == "training"){
+      need(body, /机构|大学|学院|公司|平台|中心/, "培训简介（发起或举办机构）没写清。");
+      need(body, /内容|课程|学习|掌握|实操/, "培训内容（方式、内容）没写清。");
+      need(body, /证书|排名|分数|考核|收获/, "培训结果/收获（证书、考核、收获）没写清。");
+    } else if(code == "campus"){
+      need(body, /组织|策划|协调|沟通|团队|参与/, "校内工作建议突出组织、沟通协调、团队协作等能力的锻炼。");
+    } else if(code == "selfEval"){
+      var cnt = body.split(/[；;\n。]/).map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 3; }).length;
+      total++; if(cnt >= 3) pass++; else tips.push("自我评价建议不少于 3 条（当前约 " + cnt + " 条），可从能力优势、经验优势、性格优势多维度写。");
+    } else if(code == "careerPlan"){
+      need(body, /短期|近期|入职|初/, "缺短期规划（熟悉环境、掌握内容、完成身份转变）。");
+      need(body, /中期|提升|考证|业务/, "缺中期规划（提升业务能力、考证书、成为业务能手）。");
+      need(body, /长期|未来|带头|导师|多面手/, "缺长期规划（成为带头人、传帮带、多面手）。每段都要「通过什么方式，达到什么目标」。");
+    } else if(code == "applyReason"){
+      need(body, /应聘|岗位|职位|工作/, "没写清应聘什么工作岗位。");
+      need(body, /行业|前景|文化|理念|匹配|实习|就业|家乡|家庭|原因/, "应聘理由可从行业前景、单位理念、实习经历、专业匹配、就业形势、个人原因等维度补充。");
+    } else if(code == "suitableJob"){
+      need(body, /适合|匹配/, "没写清适合什么工作岗位。");
+      need(body, /专业|经验|能力|性格|生源|稳定/, "适合的理由可从专业、经验、能力、性格等匹配度展开。");
+    } else if(code == "hobby"){
+      need(body, /坚持|每周|常年|获|成绩|奖|级/, "爱好建议写出收益或成绩；特长用活动、比赛、荣誉证书来呈现，并尽量与目标岗位关联。");
+    }
+    if(tips.length) items.push({ code: code, tips: tips });
+  });
+  return { items: items, pass: pass, total: total };
+}
+
+function diagScore(mods, type, check, t){
+  var out = {};
+  /* 完整度(20)：内容型模块近似（原版按字段记录数，纯文本近似为模块级） */
+  var allMods = ["education","work","internship","project","practice","campus","competition","training","skills","selfEval","hobby","reward"];
+  var filled = allMods.filter(function(c){ return mods[c] && mods[c].trim().length > 10; }).length;
+  out.complete = Math.floor(filled * 20 / allMods.length);
+  /* 经历描述(50)：原版 LLM 评分 → 按描述要点通过率折算（派卡人口径：规则通过率折算，保持 100 分制） */
+  out.desc = check.total ? Math.floor(check.pass * 50 / check.total) : 0;
+  /* 学习能力(15)：学历归一化后查表（博士10/MBA9/硕士8/本科7/专科6/高中3），取最高 */
+  var eduMap = [["博士",10],["MBA",9],["硕士",8],["研究生",8],["本科",7],["大专",6],["专科",6],["高中",3]];
+  var eduScore = 0;
+  eduMap.forEach(function(e){ if(t.indexOf(e[0]) >= 0 && e[1] > eduScore) eduScore = e[1]; });
+  out.learn = Math.floor(eduScore * 15 / 10);
+  /* 专业能力(5)：语言/职业资格/软件 三类命中（3→9/2→8/1→7） */
+  var hits = 0;
+  if(/英语|日语|法语|德语|韩语|俄语|CET|四六级|雅思|托福|普通话|粤语/.test(t)) hits++;
+  if(/证书|资格证|CPA|CFA|教师资格|法律职业|执业|驾驶证/.test(t)) hits++;
+  if(/Office|Excel|Word|PPT|PowerPoint|Photoshop|Python|Java|SQL|Premiere|CAD|Axure|Tableau/i.test(t)) hits++;
+  out.prof = Math.floor([0,7,8,9][hits] * 5 / 10);
+  /* 创新领导力(5)：项目/实践/比赛/校内 四类命中（≥3→9/2→8/1→7） */
+  var cls = ["project","practice","competition","campus"].filter(function(c){ return mods[c] && mods[c].trim().length > 10; }).length;
+  out.creative = Math.floor((cls >= 3 ? 9 : cls == 2 ? 8 : cls == 1 ? 7 : 0) * 5 / 10);
+  /* 职场能力(5)：实习+工作总月数阶梯（≤6→4/≤12→5/≤24→7/>24→9；无配对结束时间不计月数） */
+  var scope = (mods.work || mods.internship) ? [mods.work, mods.internship].filter(Boolean).join("\n") : "";
+  var months = diagMonths(scope || t);
+  out.months = months;
+  var base3 = months <= 0 ? 0 : months <= 6 ? 4 : months <= 12 ? 5 : months <= 24 ? 7 : 9;
+  out.workplace = Math.floor(base3 * 5 / 10);
+  out.total = out.complete + out.desc + out.learn + out.prof + out.creative + out.workplace;
+  return out;
+}
+
+function renderDiag(t){
+  var mods = diagParseMods(t);
+  var type = diagType(mods, t);
+  var check = diagCheck(mods);
+  var score = diagScore(mods, type, check, t);
+  function hitRow(txt){ return '<div class="hit"><div class="fix">' + txt + '</div></div>'; }
+  function scoreRow(name, val, note){ return '<li><b>' + name + '：' + val + '</b> —— ' + note + '</li>'; }
+  var nofill = Object.keys(mods).filter(function(c){ return DIAGC.names[c] && mods[c] && mods[c].trim().length > 0 && mods[c].trim().length < 15; });
+  var nodata = DIAGC.combo[type].filter(function(c){ return !(mods[c] && mods[c].trim().length > 10); })
+                              .map(function(c){ return DIAGC.names[c]; });
+  var html = '<div class="group"><h3>结构诊断 + 六维评分<span>规则近似 · 仅供参考</span></h3>';
+  html += '<div class="empty">文本近似识别简历类型：' + DIAGC.typeNames[type] + '。本组为确定性规则近似（非 AI、纯本机），存在漏报误报；只查结构与写法，不判断经历真伪。</div>';
+  html += '<ul class="how">'
+    + scoreRow("简历完整度", score.complete + "/20", "按检测到内容的模块数近似（" + filledCount(mods) + "/12 模块）")
+    + scoreRow("经历描述", score.desc + "/50", check.total ? "描述要点通过 " + check.pass + "/" + check.total + " 折算" : "无可评的经历模块")
+    + scoreRow("学习能力", score.learn + "/15", "按最高学历查表（博士10/MBA9/硕士8/本科7/专科6/高中3）")
+    + scoreRow("专业能力", score.prof + "/5", "语言 / 职业资格 / 软件操作 三类命中数")
+    + scoreRow("创新领导力", score.creative + "/5", "项目/实践/比赛/校内 四类模块命中数")
+    + scoreRow("职场能力", score.workplace + "/5", "实习+工作总月数约 " + score.months + " 个月（无结束时间的段不计）")
+    + scoreRow("总分", score.total + "/100", "规则近似评分，供参考，不代表任何招聘结果")
+    + '</ul>';
+  nofill.forEach(function(c){ html += hitRow('【' + DIAGC.names[c] + '】是简历中的重要信息，请完善（只有标题没有内容）。'); });
+  nodata.forEach(function(name){ html += hitRow('【' + name + '】可以为你加分哦，去完善。'); });
+  check.items.forEach(function(it){
+    it.tips.forEach(function(tip){ html += hitRow('【' + DIAGC.names[it.code] + '】描述建议：' + tip); });
+  });
+  var noIssues = !nofill.length && !nodata.length && !check.items.length;
+  if(noIssues) html += '<div class="empty">结构诊断未发现问题（近似）。词库检查结果见上方各栏。</div>';
+  html += '</div>';
+  result.insertAdjacentHTML('beforeend', html);
+}
+function filledCount(mods){
+  return ["education","work","internship","project","practice","campus","competition","training","skills","selfEval","hobby","reward"]
+    .filter(function(c){ return mods[c] && mods[c].trim().length > 10; }).length;
+}
+
+/* 自测开关：地址后面加 ?selftest=1 → 从本 SKU 自己的词库里各取一个词组成探针句，
+   再跑一遍检测，把命中数写进页面。有词库就必定命中，全 0 才说明逻辑或词库坏了。 */
+if(location.search.indexOf('selftest') >= 0){
+  var pick = function(a){ return (a && a.length) ? a[0] : null; };
+  var probe = [pick(CFG.empty_words), pick(CFG.assert_words), pick(CFG.vague_source), pick(CFG.flatter_words)];
+  var lists = [CFG.empty_words, CFG.assert_words, CFG.vague_source, CFG.flatter_words];
+  var missing = [];
+  ['empty_words', 'assert_words', 'vague_source', 'flatter_words'].forEach(function(k, i){
+    if(!lists[i] || !lists[i].length){ missing.push(k); }
+  });
+  src.value = '自测探针：' + probe.filter(Boolean).join('；') + '。';
+  run();
+  var b = document.createElement('div');
+  b.id = 'selftest-banner';
+  b.style.cssText = 'background:#1F1B16;color:#FFF;font-size:19px;font-weight:700;padding:13px 16px;border-radius:8px;margin:0 0 14px;line-height:1.5';
+  b.textContent = window.__last
+    ? 'SELFTEST 套话' + window.__last.hEmpty.length + ' / 绝对化' + window.__last.hAssert.length +
+      ' / 模糊出处' + window.__last.hSource.length + ' / 附和' + window.__last.hFlatter.length +
+      ' / 长句' + window.__last.hLong.length +
+      (missing.length ? '  ⚠空词库:' + missing.join(',') : '')
+    : 'SELFTEST FAIL 脚本没跑起来';
+  document.body.insertBefore(b, document.body.firstChild);
+  document.title = b.textContent;
+}
+</script>
+</body>
+</html>
