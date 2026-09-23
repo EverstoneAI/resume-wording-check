@@ -60,6 +60,11 @@ pre.out{background:#F4F2F9;border:1px solid var(--line);border-radius:10px;paddi
 .pb-note{color:var(--ink3);font-size:12.5px;margin:0 0 8px}
 .promptbox textarea{min-height:0;font-size:13px;line-height:1.75;background:#FBFCFE;margin:4px 0 12px;cursor:text}
 .notewarn{background:#FFF8EC;border:1px solid #EFE0C8;border-left:4px solid #D9A026;border-radius:10px;padding:9px 13px;font-size:12.5px;color:#7A6242}
+.drop{border:2px dashed #C6C3D6;border-radius:12px;padding:14px;text-align:center;font-size:13px;color:var(--ink2);cursor:pointer;background:#FBFAFE;margin-bottom:12px}
+.drop:hover,.drop.on{border-color:var(--acc2);background:var(--acc-soft)}
+.drop .fstate{display:block;margin-top:6px;font-size:12px;color:var(--ink3)}
+.drop .fstate.bad{color:var(--warn);font-weight:700}
+.light{margin:2px 0}
 @media(max-width:640px){.hero{padding:26px 16px 56px}h1{font-size:22px}.logo{width:44px;height:44px;border-radius:12px}.logo svg{width:24px;height:24px}.panel{padding:16px 14px}.wrap{padding:0 14px 24px}}
 </style>
 </head>
@@ -79,6 +84,19 @@ pre.out{background:#F4F2F9;border:1px solid var(--line);border-radius:10px;paddi
 
   <div class="panel">
     <label for="src">待检查文字</label>
+    <div class="drop" id="drop" title="点击选择文件，或把文件拖进来">
+      <input type="file" id="file" accept=".pdf,.docx,.txt" hidden>
+      📄 也可以直接放文件：支持 .pdf / .docx（尽力解析，失败会告诉你为什么）——点击选择或拖进来
+      <span class="fstate" id="fstate"></span>
+    </div>
+    <div class="hint"><b>声明：文件解析为纯前端尽力近似，可能不准、会漏内容——建议优先直接复制粘贴文字。</b>另：扫描版 / 图片型简历机器读不了；两栏复杂排版易解析错乱；文件命名建议「简历_姓名_岗位.pdf」。解析失败时，直接复制粘贴文字即可。</div>
+
+    <details class="sub" style="margin-top:12px">
+      <summary>JD 对照（可选）：把岗位 JD 粘进来，模拟机器关键词匹配与硬性条件过滤</summary>
+      <div style="padding:8px 12px 12px">
+        <textarea id="jdtxt" style="width:100%;min-height:100px;font:inherit;font-size:13px;line-height:1.7;border:1px solid #C9D8CF;border-radius:10px;padding:10px;background:#FBFDFF;color:var(--ink)" placeholder="把招聘 JD 的职位描述整段粘进来（选填）。工具会抽取其中的技能词、英文词与学历/年限要求，对照你的简历给出「机器会不会放行」的近似判断。"></textarea>
+      </div>
+    </details>
     <textarea id="src" placeholder="把要检查的文字整段粘进来（AI 写的稿子、汇报、标书、详情页文案都行）…"></textarea>
     <div class="row">
       <button id="run">开始检查</button>
@@ -213,6 +231,7 @@ function run(){
                       '<div>结论 <b>' + (score === 0 ? '干净' : score <= 3 ? '小改' : score <= 8 ? '要改' : '重写') + '</b></div>';
   $('#state').textContent = '检查完了';
   window.__last = { sents: sents, hEmpty: hEmpty, hAssert: hAssert, hSource: hSource, hFlatter: hFlatter, hLong: hLong };
+  try{ renderAts(t); }catch(e){ /* ATS 链路异常不阻断其余检查 */ }
   try{ renderDiag(t); }catch(e){ /* 诊断链路异常不阻断词库检查 */ }
 }
 
@@ -410,6 +429,255 @@ function filledCount(mods){
     .filter(function(c){ return mods[c] && mods[c].trim().length > 10; }).length;
 }
 
+/* ========== 文件投放（PDF/DOCX 尽力解析）+ 机器初筛模拟 A/B（确定性规则，非 AI；近似有局限，页面已标注）========== */
+var ATS = {
+  /* 手机号：覆盖 19221678694 / 192-2167-8694 / 192 2167 8694 / +86 前缀 / 86- 前缀等写法。
+     前后断言防止从长数字串（如身份证）中部截出 11 位误报（卡 10）。 */
+  phone: /(?:\+?86[ \-.]?)?(?<!\d)1[3-9](?:[ \-.]?\d){9}(?![ \-.]?\d)/,
+  mail: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
+  edu: /博士|硕士|研究生|本科|大专|专科|高中/,
+  job: /(应聘|求职|意向)[^\n]{0,10}(岗位|职位|方向)|求职意向|应聘岗位|意向岗位/,
+  city: /(期望|意向|工作|求职)(城市|地点)|工作地点|所在城市/,
+  avail: /到岗|随时|一周内|两周内|入职时间|可立刻/
+};
+async function inflateRaw(u8){
+  var ds = new DecompressionStream("deflate-raw");
+  var ab = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+  return new TextDecoder().decode(ab);
+}
+function xmlToText(xml){
+  return xml.replace(/<w:p\b[^>]*>/g, "\n").replace(/<w:tab\b[^>]*\/?>/g, "\t")
+    .replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    .replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+async function parseDocx(buf){
+  var u8 = new Uint8Array(buf), dv = new DataView(buf), i = 0, n = u8.length;
+  while(i < n - 4){
+    if(dv.getUint32(i, true) === 0x04034b50){
+      var nameLen = dv.getUint16(i + 26, true), extraLen = dv.getUint16(i + 28, true);
+      var name = new TextDecoder().decode(u8.subarray(i + 30, i + 30 + nameLen));
+      var dataStart = i + 30 + nameLen + extraLen;
+      if(name === "word/document.xml"){
+        var method = dv.getUint16(i + 8, true);
+        var csize = dv.getUint32(i + 18, true);
+        var comp = u8.subarray(dataStart, csize ? Math.min(dataStart + csize, n) : n);
+        var xml = method === 0 ? new TextDecoder().decode(comp) : await inflateRaw(comp);
+        return xmlToText(xml);
+      }
+      var csize2 = dv.getUint32(i + 18, true);
+      i = csize2 ? dataStart + csize2 : i + 4;
+    } else i++;
+  }
+  throw new Error("没找到 word/document.xml——可能不是标准 .docx 文件");
+}
+function pdfUnesc(x){
+  return x.replace(/\\([nrtbf()\\])/g, function(_, c){ return {n:"\n", r:"", t:"\t", b:"", f:"", "(": "(", ")": ")", "\\": "\\"}[c]; })
+    .replace(/\\([0-7]{1,3})/g, function(_, o){ return String.fromCharCode(parseInt(o, 8)); });
+}
+function pdfBytesOf(x){ var u = new Uint8Array(x.length); for(var i = 0; i < x.length; i++) u[i] = x.charCodeAt(i) & 0xFF; return u; }
+function pdfDecStr(x){
+  var high = false;
+  for(var i = 0; i < x.length; i++) if(x.charCodeAt(i) > 127){ high = true; break; }
+  if(!high) return x;
+  try{ return new TextDecoder("gbk").decode(pdfBytesOf(x)); }catch(e){ return x; }
+}
+function pdfDecHex(h){
+  h = h.replace(/\s+/g, "");
+  if(h.length < 4) return "";
+  if(/^FEFF/i.test(h)){
+    var u0 = "";
+    for(var i0 = 4; i0 + 4 <= h.length; i0 += 4) u0 += String.fromCharCode(parseInt(h.substr(i0, 4), 16));
+    return u0;
+  }
+  if(/^FFFE/i.test(h)){
+    var u1 = "";
+    for(var i1 = 4; i1 + 4 <= h.length; i1 += 4) u1 += String.fromCharCode(parseInt(h.substr(i1 + 2, 2) + h.substr(i1, 2), 16));
+    return u1;
+  }
+  if(h.length % 4 === 0){
+    var u2 = "", good = 0;
+    for(var i2 = 0; i2 < h.length; i2 += 4){
+      var cc = parseInt(h.substr(i2, 4), 16);
+      u2 += String.fromCharCode(cc);
+      if(cc === 0x20 || (cc >= 0x30 && cc <= 0x39) || (cc >= 0x41 && cc <= 0x5A) || (cc >= 0x61 && cc <= 0x7A) || (cc >= 0x4E00 && cc <= 0x9FFF) || (cc >= 0x3000 && cc <= 0x303F) || (cc >= 0xFF00 && cc <= 0xFFEF) || cc === 0x2014 || cc === 0x2018 || cc === 0x2019 || cc === 0x201C || cc === 0x201D) good++;
+    }
+    if(u2.length && good / u2.length > 0.6) return u2;
+  }
+  return pdfDecStr(pdfBytesOf(h));
+}
+function pdfText(s){
+  var parts = [];
+  /* 两段线性提取：先解码 <hex> Tj（UTF-16BE/GBK 启发式）直接入结果，
+     再从剩余内容收集 (...) 字面量。不用单一复杂交替正则（部分输入模式会触发引擎崩溃）。 */
+  s.replace(/<([0-9A-Fa-f\s]+)>\s*(?:Tj|TJ)/g, function(_, h){
+    var t = pdfDecHex(h);
+    if(t) parts.push(t);
+    return "";
+  });
+  var s2 = s.replace(/<([0-9A-Fa-f\s]+)>\s*(?:Tj|TJ)/g, "");
+  var re = /\(((?:\\.|[^\\()])*)\)/g, m;
+  while((m = re.exec(s2)) !== null) parts.push(pdfDecStr(pdfUnesc(m[1])));
+  var txt = parts.join(""), bad = 0, cjk = 0;
+  for(var k = 0; k < txt.length; k++){
+    var c = txt.charCodeAt(k);
+    if(c >= 0xE000 && c <= 0xF8FF) bad++;
+    if(c >= 0x4E00 && c <= 0x9FFF) cjk++;
+  }
+  if(bad > 5 && bad > cjk) throw new Error("这个 PDF 用了内嵌字体子集，抽出来是乱码——机器（包括 ATS）很可能同样读不出内容");
+  if(txt.replace(/\s/g, "").length < 6) throw new Error("只抽出极少文字——可能是图片型/扫描版文件，机器同样读不出来");
+  return txt.replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+async function parsePdf(buf){
+  var u8 = new Uint8Array(buf);
+  var latin = new TextDecoder("latin1").decode(u8);
+  var out = [], re = /stream\r?\n/g, m;
+  while((m = re.exec(latin)) !== null){
+    var start = m.index + m[0].length;
+    var end = latin.indexOf("endstream", start);
+    if(end < 0) break;
+    while(end > start && (latin[end - 1] === "\n" || latin[end - 1] === "\r")) end--;
+    var dictAt = latin.lastIndexOf("<<", m.index);
+    var dict = dictAt >= 0 ? latin.substring(dictAt, m.index) : "";
+    var seg = u8.subarray(start, end);
+    try{
+      if(/FlateDecode/.test(dict)) out.push(await inflateRaw(seg));
+      else if(!/\/Image|\/DCTDecode|\/JPXDecode|\/TrueType|\/Type0|\/FontDescriptor|\/ToUnicode|\/Widths/.test(dict)) out.push(new TextDecoder("latin1").decode(seg));
+    }catch(e){}
+    re.lastIndex = end;
+  }
+  var content = out.join("\n");
+  return pdfText(content || latin);
+}
+async function loadFile(file){
+  var st = $("#fstate");
+  st.className = "fstate";
+  var name = (file.name || "").toLowerCase();
+  try{
+    var text = "";
+    if(/\.txt$/.test(name)) text = await file.text();
+    else if(/\.docx$/.test(name)) text = await parseDocx(await file.arrayBuffer());
+    else if(/\.pdf$/.test(name)) text = await parsePdf(await file.arrayBuffer());
+    else if(/\.doc$/.test(name)) throw new Error("老版 .doc 解析不了：请用 Word/WPS 另存为 .docx 再放，或直接复制粘贴文字");
+    else throw new Error("支持 .pdf / .docx / .txt");
+    text = (text || "").trim();
+    if(text.length < 20) throw new Error("只解析出很少的文字——如果是扫描版/图片型文件，机器（包括 ATS）同样读不出来，请直接复制粘贴文字");
+    $("#src").value = text;
+    st.textContent = "已载入「" + file.name + "」约 " + text.replace(/\s/g, "").length + " 字——解析是尽力近似，建议校对一眼再开始检查。";
+  }catch(e){
+    st.className = "fstate bad";
+    st.textContent = "解析失败：" + e.message;
+  }
+}
+$("#drop").addEventListener("click", function(e){ if(e.target === $("#file")) return; $("#file").click(); });
+$("#file").addEventListener("change", function(){ if(this.files && this.files[0]) loadFile(this.files[0]); this.value = ""; });
+["dragover", "dragenter"].forEach(function(ev){ $("#drop").addEventListener(ev, function(e){ e.preventDefault(); $("#drop").classList.add("on"); }); });
+["dragleave", "drop"].forEach(function(ev){ $("#drop").addEventListener(ev, function(e){ e.preventDefault(); $("#drop").classList.remove("on"); }); });
+$("#drop").addEventListener("drop", function(e){ if(e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+
+/* 机器初筛模拟 A（可读性自查）+ B（时间线体检） */
+function renderAts(t){
+  var L = [], hard = 0, soft = 0;
+  function row(icon, text, fix){ L.push('<div class="hit light"><div class="fix"><b>' + icon + "</b> " + text + (fix ? ' <b>怎么补</b>：' + fix : "") + "</div></div>"); }
+  function need(re, label, fix){
+    if(re.test(t)) row("🟢", label + "：机器抓到了。", "");
+    else { hard++; row("🔴", label + "：没抓到。", fix); }
+  }
+  function softNeed(re, label, fix){
+    if(re.test(t)) row("🟢", label + "：有。", "");
+    else { soft++; row("🟡", label + "：没写到。", fix); }
+  }
+  need(ATS.phone, "手机号", "补一行「电话：138xxxxxxxx」——机器抓不到手机号，你过了筛也没人联系得上你。");
+  need(ATS.mail, "邮箱", "补「邮箱：xxx@xx.com」，用常见邮箱，别只留微信。");
+  need(ATS.edu, "学历", "写清学历（如「XX大学 · 本科」）——学历是机器的第一条硬性过滤规则。");
+  softNeed(ATS.job, "求职意向 / 应聘岗位", "写一行「求职意向：XX 岗位」，机器按岗位分拣，不写容易被归错类。");
+  softNeed(ATS.city, "期望城市 / 工作地点", "写一行「期望城市：XX」，跨城市岗位机器常按城市先滤一遍。");
+  softNeed(ATS.avail, "到岗时间", "写「到岗时间：随时 / 一周内」，招聘旺季机器会按到岗速度排序。");
+  /* B 时间线体检 */
+  var mods = diagParseMods(t);
+  var scope = [mods.work, mods.internship, mods.practice].filter(Boolean).join("\n");
+  var segText = scope || t;
+  var segs = [], re = /((?:19|20)\d{2})\s*[\.\/年\-]\s*(\d{1,2})\s*月?\s*(?:[-–—~～至到]{1,2})\s*(?:(至今|现在)|(?:((?:19|20)\d{2})\s*[\.\/年\-]\s*(\d{1,2})\s*月?))/g, m;
+  while((m = re.exec(segText)) !== null){
+    var sm = +m[2];
+    if(sm < 1 || sm > 12) continue;
+    var sD = new Date(+m[1], sm - 1, 1), eD = null, open = false;
+    if(m[3]){ eD = new Date(2100, 0, 1); open = true; }
+    else if(m[4]){ var em = +m[5]; if(em < 1 || em > 12) continue; eD = new Date(+m[4], em - 1, 28); }
+    else continue;
+    segs.push({s: sD, e: eD, open: open, raw: m[0].replace(/\s+/g, "")});
+  }
+  if(segs.length >= 2){
+    segs.sort(function(a, b){ return a.s - b.s; });
+    var gaps = 0, overlaps = 0, shortSegs = 0;
+    for(var i = 0; i < segs.length; i++){
+      var seg = segs[i];
+      if(!seg.open){
+        var days = (seg.e - seg.s) / 86400000;
+        if(days < 330) shortSegs++;
+      }
+      if(i > 0){
+        var prev = segs[i - 1];
+        if(seg.s > prev.e){
+          var gapM = Math.round((seg.s - prev.e) / 2592000000);
+          if(gapM >= 3){ gaps++; row("🟡", "时间断档：上一段结束到这一段开始（" + seg.raw + "）隔了约 " + gapM + " 个月。", "断档期写一笔当时在做什么（学习 / 备考 / 家庭事务），别让机器和 HR 猜。"); }
+        } else if(seg.s <= prev.e){ overlaps++; row("🟡", "时间重叠：" + seg.raw + " 与上一段有交叠。", "并行经历是常见的，但建议注明「兼职 / 并行」，免得被当笔误。"); }
+      }
+    }
+    if(shortSegs >= 3) row("🔴", "有 " + shortSegs + " 段经历不满 1 年——「频繁跳槽」是机器和 HR 都会打的标签。", "同公司转岗的合并写成一段，并给每段配一句说得过去的收尾。");
+    if(!gaps && !overlaps && shortSegs < 3) row("🟢", "时间线体检：各段衔接正常。", "");
+  } else {
+    soft++; row("🟡", "时间线：没抓到成对的起止日期（如 2021.6-2023.8）。", "每段经历都写「开始—结束」时间，机器靠它算工作年限——这也是最常见的过滤字段。");
+  }
+  /* C JD 对照（选填） */
+  var jd = ($("#jdtxt").value || "").trim();
+  if(jd.length > 20){
+    var SKILLS = ["Excel","Word","PPT","PowerPoint","Office","Photoshop","PS","AI","Premiere","PR","Python","Java","SQL","CAD","Axure","Tableau",
+      "数据分析","新媒体运营","短视频","直播","剪辑","拍摄","文案","策划","平面设计","UI设计","前端","后端","软件测试","运维",
+      "客服","销售","采购","仓储","物流","财务","会计","出纳","审计","税务","人力资源","招聘","培训","绩效","行政","文员",
+      "淘宝","拼多多","抖音","天猫","跨境电商","SEO","SEM","私域","项目管理","团队管理","客户维护","商务谈判","投标","预算","成本核算","教师资格证"];
+    var lowerT = t.toLowerCase();
+    var jdHits = [], jdMiss = [];
+    SKILLS.forEach(function(w){
+      if(jd.indexOf(w) >= 0){ (lowerT.indexOf(w.toLowerCase()) >= 0 ? jdHits : jdMiss).push(w); }
+    });
+    var enRe = /[A-Za-z][A-Za-z0-9+#.\/-]{1,15}/g, enm;
+    while((enm = enRe.exec(jd)) !== null){
+      var w = enm[0];
+      if(["the","and","with","for","of","to","in","a","an","or","is","are","be","on","by","at","as"].indexOf(w.toLowerCase()) < 0
+         && jdHits.indexOf(w) < 0 && jdMiss.indexOf(w) < 0){
+        (lowerT.indexOf(w.toLowerCase()) >= 0 ? jdHits : jdMiss).push(w);
+      }
+    }
+    row(jdHits.length ? "🟢" : "🟡", "JD 关键词命中：" + (jdHits.length ? jdHits.join("、") : "无命中"), "");
+    if(jdMiss.length) row("🟡", "JD 关键词未命中：" + jdMiss.join("、") + "。", "如果这些技能你其实具备，把它们写进对应经历的「做了什么」里——机器按关键词检索，藏在描述里的同义说法很少能被搜到；确实不具备的不要编。");
+    var EDU_SEQ = [["高中",1],["大专",2],["专科",2],["本科",3],["硕士",4],["研究生",4],["MBA",4],["博士",5]];
+    var jdEdu = -1, jdEduName = "";
+    EDU_SEQ.forEach(function(e){ if(jd.indexOf(e[0]) >= 0 && e[1] > jdEdu){ jdEdu = e[1]; jdEduName = e[0]; } });
+    if(jdEdu > 0){
+      var myEdu = 0;
+      EDU_SEQ.forEach(function(e){ if(t.indexOf(e[0]) >= 0 && e[1] > myEdu) myEdu = e[1]; });
+      if(myEdu >= jdEdu) row("🟢", "学历要求「" + jdEduName + "」：机器会判达标。", "");
+      else row("🔴", "学历要求「" + jdEduName + "」，简历里只识别到更低学历——机器大概率直接过滤。", "如果实际符合（如全日制/非全日制差异），把学历写得明确规范；确实不符就不要硬凑，换投要求更宽的岗位。");
+    }
+    var ym = jd.match(/(\d+)\s*年/);
+    if(ym){
+      var needM = (+ym[1]) * 12;
+      var myMonths = diagMonths(t);
+      if(myMonths >= needM) row("🟢", "年限要求「" + ym[1] + " 年」：机器按日期段累计约 " + myMonths + " 个月，会判达标。", "");
+      else row("🔴", "年限要求「" + ym[1] + " 年」，简历日期段累计约 " + myMonths + " 个月——机器大概率按不达标过滤。", "确认每段经历都写了起止时间（漏写会被算少）；实习与工作都计入；确实不足就不要虚报年限。");
+    }
+  }
+  /* D 篇幅 */
+  var chars = t.replace(/\s/g, "").length;
+  if(chars < 300) row("🟡", "篇幅偏短（" + chars + " 字）：机器解析无碍，但内容太少时硬性条件容易挂空。", "把每段经历补到「做了什么＋怎么做＋结果数字」。");
+  else if(chars > 1600) row("🟡", "篇幅偏长（" + chars + " 字）：建议精简到一页（约 1200 字内），HR 平均只扫几十秒。", "删掉与应聘岗位无关的经历，老经历一句话带过。");
+  else row("🟢", "篇幅合理（" + chars + " 字）。", "");
+  var lampText = (hard + soft) === 0 ? "全部通过" : (hard ? "🔴 " + hard + " 处可能被直接过滤" : "无硬伤") + (soft ? "；🟡 " + soft + " 处建议补" : "");
+  var html = '<div class="group"><h3>机器初筛模拟（ATS 视角）<span>' + lampText + "</span></h3>" +
+    '<div class="empty">本栏模拟 ATS（如 Moka 这类招聘系统）的机器过滤逻辑：🔴 大概率被直接过滤，🟡 会被扣分 / 标注，🟢 通过。只陈述机器行为，不代表你的能力，更不构成评价。</div>' +
+    L.join("") + "</div>";
+  result.insertAdjacentHTML("afterbegin", html);
+}
 /* 自测开关：地址后面加 ?selftest=1 → 从本 SKU 自己的词库里各取一个词组成探针句，
    再跑一遍检测，把命中数写进页面。有词库就必定命中，全 0 才说明逻辑或词库坏了。 */
 if(location.search.indexOf('selftest') >= 0){
